@@ -1,0 +1,76 @@
+os: linux
+
+dist: bionic
+
+language: cpp
+
+git:
+  depth: false
+
+
+jobs:
+  include:
+# Linux
+    - env: PYTHON="3.5" CONDA_PY=35 ARCH="x86_64"
+    - env: PYTHON="3.6" CONDA_PY=36 ARCH="x86_64"
+    - env: PYTHON="3.7" CONDA_PY=37 ARCH="x86_64"
+# OSX
+    - env: PYTHON="3.5" CONDA_PY=35 ARCH="x86_64"
+      os: osx
+      osx_image: xcode9.4
+    - env: PYTHON="3.6" CONDA_PY=36 ARCH="x86_64"
+      os: osx
+      osx_image: xcode9.4
+    - env: PYTHON="3.7" CONDA_PY=37 ARCH="x86_64"
+      os: osx
+      osx_image: xcode9.4
+# Windows
+    - env: PYTHON="3.5" CONDA_PY=35 ARCH="x86_64" CC="cl.exe" CXX="cl.exe" MSVC_TOOLSET_VERSION=15
+      os: windows
+    - env: PYTHON="3.6" CONDA_PY=36 ARCH="x86_64" CC="cl.exe" CXX="cl.exe" MSVC_TOOLSET_VERSION=15
+      os: windows
+    - env: PYTHON="3.7" CONDA_PY=37 ARCH="x86_64" CC="cl.exe" CXX="cl.exe" MSVC_TOOLSET_VERSION=15
+      os: windows
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then
+      MINICONDA_PATH=$HOME/miniconda;
+      MINICONDA_SUB_PATH=$MINICONDA_PATH/bin;
+    elif [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+      MINICONDA_PATH=/c/tools/miniconda3;
+      MINICONDA_SUB_PATH=$MINICONDA_PATH/Scripts;
+    fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
+    fi
+
+install:
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then
+      chmod +x miniconda.sh;
+      yes | ./miniconda.sh -b -p $MINICONDA_PATH;
+    elif  [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+      echo "installing miniconda for windows";
+      choco install openssl.light;
+      choco install miniconda3;
+    fi;
+  - export PATH="$MINICONDA_PATH:$MINICONDA_SUB_PATH:$PATH";
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+  # download/install OCE from DLR-SC channel
+  - conda config --add channels https://conda.anaconda.org/dlr-sc
+  - conda config --add channels https://conda.anaconda.org/conda-forge
+  # create a test environment
+  - conda create -n test_pythonocc python=$PYTHON
+  # switch to this environment
+  - source activate test_pythonocc
+  - conda install -c dlr-sc/label/dev pythonocc-core=7.4.0beta
+  - conda install pyqt
+  - conda install numpy
+
+script:
+  - sh run_examples.sh
